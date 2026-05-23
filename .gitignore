@@ -1,0 +1,13 @@
+# Excel-Datenbanken (Eingabe und Ausgabe)
+*.xlsx
+mitglieder_nami.xlsx
+ueberweiser_finanzen.xlsx
+fehlende_daten.xlsx
+
+# Generierte SEPA-Dateien
+*.xml
+sepa_abbuchung.xml
+
+# Python-Systemdateien
+__pycache__/
+*.pyc
