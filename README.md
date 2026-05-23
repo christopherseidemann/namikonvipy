@@ -29,7 +29,9 @@ Um dieses Skript zu nutzen, brauchst du **Python** auf deinem Computer und zwei 
 Öffne die Eingabeaufforderung (Windows: `cmd` eingeben in der Suche) oder das Terminal (Mac) und tippe folgenden Befehl ein, um die benötigten Erweiterungen zu installieren:
 
 ```bash
-pip install -r requirements.txt  
+pip install -r requirements.txt 
+ 
+```
 
 Schritt 3: Skript anpassen
 
@@ -44,8 +46,11 @@ Schritt 3: Skript anpassen
 Schritt 4: Skript starten
 
 Führe das Skript im Terminal aus:
+
 ```bash
 python namikonvi.py
+
+```
 
 
 Was passiert danach? (Ausgabedateien)
