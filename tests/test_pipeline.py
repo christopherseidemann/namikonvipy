@@ -86,6 +86,19 @@ def test_ohne_iban_landet_auf_der_ueberweiserliste(tmp_path, monkeypatch):
     assert liste['Nachname'].tolist() == ['Ohnekonto']
 
 
+def test_haushalt_wird_nur_ueber_die_iban_gebildet(tmp_path, monkeypatch):
+    # Zwei Geschwister mit unterschiedlichem Nachnamen, gleiches Konto
+    zeilen = [
+        mitglied('1001', 'Anna', 'Müller', IBAN_MUELLER),
+        mitglied('1008', 'Hanna', 'Müller-Yilmaz', IBAN_MUELLER),
+    ]
+    ordner = lauf(tmp_path, monkeypatch, zeilen)
+    buchungen = lies_xml(ordner).xpath('//p:DrctDbtTxInf', namespaces=NS)
+    assert len(buchungen) == 1
+    zweck = buchungen[0].xpath('p:RmtInf/p:Ustrd/text()', namespaces=NS)[0]
+    assert 'Anna' in zweck and 'Hanna' in zweck
+
+
 def test_ungueltige_iban_landet_im_fehlerbericht(tmp_path, monkeypatch):
     zeilen = STANDARD + [mitglied('1007', 'Greta', 'Falsch', 'DE31100000001111111111')]
     ordner = lauf(tmp_path, monkeypatch, zeilen)

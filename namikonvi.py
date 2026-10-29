@@ -168,7 +168,9 @@ def sepa_pipeline():
     fehler_liste = []
     buchungen = []
 
-    for (nachname, iban), gruppe in df_lastschrift.groupby(['Nachname', 'IBAN']):
+    # Ein Haushalt = alle Mitglieder, die vom selben Konto abgebucht werden.
+    # Der Nachname zählt nicht, weil Geschwister verschiedene Nachnamen haben können.
+    for iban, gruppe in df_lastschrift.groupby('IBAN'):
         if not iban_valide(iban):
             for _, row in gruppe.iterrows():
                 r = row.to_dict(); r['Fehlergrund'] = f'IBAN ungültig: {iban}'
