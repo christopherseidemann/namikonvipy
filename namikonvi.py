@@ -124,8 +124,12 @@ def build_pain_xml(buchungen, faellig, msg_id):
         sub(mri, n('MndtId'),    b['mandat'])
         sub(mri, n('DtOfSgntr'), b['mandat_datum'])
 
-        sub(sub(sub(tx, n('DbtrAgt')), n('FinInstnId')), n('BIC'),
-            b['bic'] if b['bic'] else 'NOTPROVIDED')
+        fin = sub(sub(tx, n('DbtrAgt')), n('FinInstnId'))
+        if b['bic']:
+            sub(fin, n('BIC'), b['bic'])
+        else:
+            # Ohne BIC sieht das Schema Othr/Id = NOTPROVIDED vor, nicht BIC = NOTPROVIDED
+            sub(sub(fin, n('Othr')), n('Id'), 'NOTPROVIDED')
         sub(sub(tx, n('Dbtr')), n('Nm'), b['kontoinhaber'])
         sub(sub(sub(tx, n('DbtrAcct')), n('Id')), n('IBAN'), b['iban'])
         sub(sub(tx, n('RmtInf')), n('Ustrd'), b['verwendungszweck'])

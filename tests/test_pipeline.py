@@ -87,6 +87,15 @@ def test_ohne_iban_landet_auf_der_ueberweiserliste(tmp_path, monkeypatch):
     assert liste['Nachname'].tolist() == ['Ohnekonto']
 
 
+def test_fehlende_bic_wird_als_notprovided_markiert(tmp_path, monkeypatch):
+    ordner = lauf(tmp_path, monkeypatch, STANDARD)
+    xml = lies_xml(ordner)
+    bics = xml.xpath('//p:DbtrAgt/p:FinInstnId/p:BIC/text()', namespaces=NS)
+    ohne = xml.xpath('//p:DbtrAgt/p:FinInstnId/p:Othr/p:Id/text()', namespaces=NS)
+    assert bics == ['MARKDEF1100']      # Schmidt hat eine BIC
+    assert ohne == ['NOTPROVIDED']      # Müller nicht
+
+
 def test_message_id_unterscheidet_zwei_laeufe_am_selben_tag():
     morgens = namikonvi.erzeuge_msg_id(datetime(2026, 11, 1, 9, 0, 0))
     abends  = namikonvi.erzeuge_msg_id(datetime(2026, 11, 1, 18, 30, 5))
