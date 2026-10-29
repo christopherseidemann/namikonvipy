@@ -18,7 +18,7 @@ Lade Python von [python.org](https://www.python.org/downloads/) herunter und ins
 
 ### Einmalig: Tool herunterladen
 
-Auf der GitHub-Seite des Projekts auf **Code** → **Download ZIP** klicken und die ZIP-Datei entpacken.
+Auf der GitHub-Seite des Projekts auf **Code** → **Download ZIP** klicken. Dann die ZIP-Datei **entpacken**: Rechtsklick auf die Datei → **Alle extrahieren …**. Ein Doppelklick auf `starten.bat` direkt in der ZIP-Datei funktioniert nicht.
 
 ### Starten
 
