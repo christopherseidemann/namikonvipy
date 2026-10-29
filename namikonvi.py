@@ -14,6 +14,10 @@ GLAEUBIGER_IBAN    = 'DE00000000000000000000'  # <-- Vereinskonto
 GLAEUBIGER_BIC     = 'XXXXXXXX'                # <-- Vereinsbank BIC
 FAELLIGKEITSDATUM  = ''   # leer = heute; oder z.B. '2026-06-01'
 
+STAMM_NAME         = 'DPSG Balingen eV'   # steht im Verwendungszweck
+MSG_ID_PREFIX      = 'DPSG-BALINGEN'      # Anfang der Message-ID, höchstens 17 Zeichen
+BEITRAGSJAHR       = 2026                 # steht im Verwendungszweck
+
 INPUT_DATEI        = 'mitglieder_nami.xlsx'
 OUTPUT_XML         = 'sepa_abbuchung.xml'
 OUTPUT_UEBERWEISER = 'ueberweiser_finanzen.xlsx'
@@ -47,7 +51,7 @@ def erzeuge_msg_id(zeitpunkt):
     Banken lehnen eine Datei ab, deren Message-ID schon einmal benutzt wurde.
     Mit nur dem Datum hätte ein zweiter Lauf am selben Tag dieselbe ID.
     """
-    return f"DPSG-BALINGEN-{zeitpunkt.strftime('%Y%m%d%H%M%S')}"
+    return f"{MSG_ID_PREFIX}-{zeitpunkt.strftime('%Y%m%d%H%M%S')}"
 
 
 def sub(parent, tag, text=None, **attrib):
@@ -134,7 +138,7 @@ def build_pain_xml(buchungen, faellig, msg_id):
 
 def sepa_pipeline():
     print("=" * 55)
-    print("  DPSG BALINGEN – SEPA PIPELINE")
+    print(f"  {STAMM_NAME} – SEPA PIPELINE")
     print("=" * 55)
 
     if not os.path.exists(INPUT_DATEI):
@@ -192,7 +196,7 @@ def sepa_pipeline():
 
         vornamen = gruppe['Vorname'].tolist()
         betrag   = berechne_beitrag(len(vornamen))
-        vwz      = f"DPSG Balingen eV 2026 {', '.join(vornamen)}"
+        vwz      = f"{STAMM_NAME} {BEITRAGSJAHR} {', '.join(vornamen)}"
 
         buchungen.append({
             'kontoinhaber':     kontoinhaber,
