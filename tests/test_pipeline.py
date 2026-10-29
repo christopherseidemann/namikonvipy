@@ -68,6 +68,14 @@ def test_iban_pruefung():
     assert not namikonvi.iban_valide('DE30')                       # zu kurz
 
 
+@pytest.mark.parametrize('kinder, erwartet', [(1, 40.0), (2, 60.0), (3, 90.0)])
+def test_beitrag_pro_haushalt(kinder, erwartet, monkeypatch):
+    # Beträge im Test fest setzen, damit er nicht von der Konfiguration abhängt
+    monkeypatch.setattr(namikonvi, 'BEITRAG_EINZELKIND', 40.0)
+    monkeypatch.setattr(namikonvi, 'BEITRAG_GESCHWISTER', 30.0)
+    assert namikonvi.berechne_beitrag(kinder) == erwartet
+
+
 def test_xml_entspricht_dem_schema(tmp_path, monkeypatch):
     ordner = lauf(tmp_path, monkeypatch, STANDARD)
     schema = etree.XMLSchema(etree.parse(str(SCHEMA)))
@@ -85,6 +93,15 @@ def test_ohne_iban_landet_auf_der_ueberweiserliste(tmp_path, monkeypatch):
     ordner = lauf(tmp_path, monkeypatch, STANDARD)
     liste = pd.read_excel(ordner / namikonvi.OUTPUT_UEBERWEISER, dtype=str)
     assert liste['Nachname'].tolist() == ['Ohnekonto']
+
+
+def test_fehlende_bic_wird_als_notprovided_markiert(tmp_path, monkeypatch):
+    ordner = lauf(tmp_path, monkeypatch, STANDARD)
+    xml = lies_xml(ordner)
+    bics = xml.xpath('//p:DbtrAgt/p:FinInstnId/p:BIC/text()', namespaces=NS)
+    ohne = xml.xpath('//p:DbtrAgt/p:FinInstnId/p:Othr/p:Id/text()', namespaces=NS)
+    assert bics == ['MARKDEF1100']      # Schmidt hat eine BIC
+    assert ohne == ['NOTPROVIDED']      # Müller nicht
 
 
 def test_message_id_unterscheidet_zwei_laeufe_am_selben_tag():

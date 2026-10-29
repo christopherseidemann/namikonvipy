@@ -14,14 +14,20 @@ GLAEUBIGER_IBAN    = 'DE00000000000000000000'  # <-- Vereinskonto
 GLAEUBIGER_BIC     = 'XXXXXXXX'                # <-- Vereinsbank BIC
 FAELLIGKEITSDATUM  = ''   # leer = heute; oder z.B. '2026-06-01'
 
-INPUT_DATEI        = 'mitglieder_nami.xlsx'
+STAMM_NAME         = 'DPSG Balingen eV'   # steht im Verwendungszweck
+MSG_ID_PREFIX      = 'DPSG-BALINGEN'      # Anfang der Message-ID, höchstens 17 Zeichen
+BEITRAGSJAHR       = 2026                 # steht im Verwendungszweck
+
+# Jahresbeitrag in Euro pro Kind
+BEITRAG_EINZELKIND  = 40.0  # nur ein Kind im Haushalt
+BEITRAG_GESCHWISTER = 30.0  # ab zwei Kindern, gilt dann für jedes Kind
+
+INPUT_DATEI       = 'mitglieder_nami.xlsx'
 OUTPUT_XML         = 'sepa_abbuchung.xml'
 OUTPUT_UEBERWEISER = 'ueberweiser_finanzen.xlsx'
 OUTPUT_FEHLER      = 'fehlende_daten.xlsx'
 
-BEITRAG_ERSTKIND    = 40.0
-BEITRAG_GESCHWISTER = 30.0
-AKTIV_STATUS        = 'Aktiv'
+AKTIV_STATUS       = 'Aktiv'
 AKTIV_TYP           = 'Mitglied'
 # ==============================================================
 
@@ -36,8 +42,9 @@ def iban_valide(iban):
 
 
 def berechne_beitrag(anzahl):
+    """Ein Kind zahlt den Einzelbeitrag, bei Geschwistern zahlt jedes Kind den Geschwisterbeitrag."""
     if anzahl == 1:
-        return BEITRAG_ERSTKIND
+        return BEITRAG_EINZELKIND
     return anzahl * BEITRAG_GESCHWISTER
 
 
@@ -47,7 +54,7 @@ def erzeuge_msg_id(zeitpunkt):
     Banken lehnen eine Datei ab, deren Message-ID schon einmal benutzt wurde.
     Mit nur dem Datum hätte ein zweiter Lauf am selben Tag dieselbe ID.
     """
-    return f"DPSG-BALINGEN-{zeitpunkt.strftime('%Y%m%d%H%M%S')}"
+    return f"{MSG_ID_PREFIX}-{zeitpunkt.strftime('%Y%m%d%H%M%S')}"
 
 
 def sub(parent, tag, text=None, **attrib):
@@ -104,21 +111,10 @@ def build_pain_xml(buchungen, faellig, msg_id):
     sub(sub(sub(pi, n('CdtrAgt')), n('FinInstnId')), n('BIC'), GLAEUBIGER_BIC)
     sub(pi, n('ChrgBr'), 'SLEV')
 
-    # CdtrSchmeId (Gläubiger-ID)
-    csi = sub(pi, n('CdtrSchmeId'))
-    othr = sub(sub(sub(sub(csi, n('Id')), n('PrvtId')), n('Othr')), n('Id'), GLAEUBIGER_ID)
-    schme = sub(othr.getparent() if hasattr(othr, 'getparent') else
-                list(csi.find(n('Id')).find(n('PrvtId'))), n('SchmeNm')) \
-        if False else None
-    # Ohne lxml kein getparent() – direkt aufbauen:
-    csi2 = root.find(f'.//{n("CdtrSchmeId")}')
-    id2   = sub(csi2, n('Id'))          if csi2.find(n('Id'))     is None else csi2.find(n('Id'))
-    prv   = sub(id2,  n('PrvtId'))      if id2.find(n('PrvtId'))  is None else id2.find(n('PrvtId'))
-    oth   = sub(prv,  n('Othr'))        if prv.find(n('Othr'))    is None else prv.find(n('Othr'))
-    if oth.find(n('Id')) is None:
-        sub(oth, n('Id'), GLAEUBIGER_ID)
-    snm   = sub(oth, n('SchmeNm'))
-    sub(snm, n('Prtry'), 'SEPA')
+    # Gläubiger-ID: CdtrSchmeId/Id/PrvtId/Othr mit Id und SchmeNm/Prtry
+    othr = sub(sub(sub(sub(pi, n('CdtrSchmeId')), n('Id')), n('PrvtId')), n('Othr'))
+    sub(othr, n('Id'), GLAEUBIGER_ID)
+    sub(sub(othr, n('SchmeNm')), n('Prtry'), 'SEPA')
 
     # Einzelbuchungen
     for b in buchungen:
@@ -131,8 +127,12 @@ def build_pain_xml(buchungen, faellig, msg_id):
         sub(mri, n('MndtId'),    b['mandat'])
         sub(mri, n('DtOfSgntr'), b['mandat_datum'])
 
-        sub(sub(sub(tx, n('DbtrAgt')), n('FinInstnId')), n('BIC'),
-            b['bic'] if b['bic'] else 'NOTPROVIDED')
+        fin = sub(sub(tx, n('DbtrAgt')), n('FinInstnId'))
+        if b['bic']:
+            sub(fin, n('BIC'), b['bic'])
+        else:
+            # Ohne BIC sieht das Schema Othr/Id = NOTPROVIDED vor, nicht BIC = NOTPROVIDED
+            sub(sub(fin, n('Othr')), n('Id'), 'NOTPROVIDED')
         sub(sub(tx, n('Dbtr')), n('Nm'), b['kontoinhaber'])
         sub(sub(sub(tx, n('DbtrAcct')), n('Id')), n('IBAN'), b['iban'])
         sub(sub(tx, n('RmtInf')), n('Ustrd'), b['verwendungszweck'])
@@ -145,7 +145,7 @@ def build_pain_xml(buchungen, faellig, msg_id):
 
 def sepa_pipeline():
     print("=" * 55)
-    print("  DPSG BALINGEN – SEPA PIPELINE")
+    print(f"  {STAMM_NAME} – SEPA PIPELINE")
     print("=" * 55)
 
     if not os.path.exists(INPUT_DATEI):
@@ -203,7 +203,7 @@ def sepa_pipeline():
 
         vornamen = gruppe['Vorname'].tolist()
         betrag   = berechne_beitrag(len(vornamen))
-        vwz      = f"DPSG Balingen eV 2026 {', '.join(vornamen)}"
+        vwz      = f"{STAMM_NAME} {BEITRAGSJAHR} {', '.join(vornamen)}"
 
         buchungen.append({
             'kontoinhaber':     kontoinhaber,
