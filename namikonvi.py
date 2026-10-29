@@ -2,11 +2,13 @@ import pandas as pd
 import os
 import re
 import io
+from dataclasses import dataclass
 from datetime import date, datetime
 from xml.etree import ElementTree as ET
 
 # ==============================================================
-# VEREINSDATEN – hier ausfüllen
+# VEREINSDATEN – hier ausfüllen (gilt für den Start per Kommandozeile;
+# in der App werden die Werte im Bereich "Einstellungen" eingetragen)
 # ==============================================================
 GLAEUBIGER_NAME    = 'DPSG XXX e.V.'
 GLAEUBIGER_ID      = 'DE98ZZZ09999999999'     # <-- von deiner Bank
@@ -22,14 +24,42 @@ BEITRAGSJAHR       = 2026                 # steht im Verwendungszweck
 BEITRAG_EINZELKIND  = 40.0  # nur ein Kind im Haushalt
 BEITRAG_GESCHWISTER = 30.0  # ab zwei Kindern, gilt dann für jedes Kind
 
-INPUT_DATEI       = 'mitglieder_nami.xlsx'
+INPUT_DATEI        = 'mitglieder_nami.xlsx'
 OUTPUT_XML         = 'sepa_abbuchung.xml'
 OUTPUT_UEBERWEISER = 'ueberweiser_finanzen.xlsx'
 OUTPUT_FEHLER      = 'fehlende_daten.xlsx'
 
 AKTIV_STATUS       = 'Aktiv'
-AKTIV_TYP           = 'Mitglied'
+AKTIV_TYP          = 'Mitglied'
 # ==============================================================
+
+
+@dataclass
+class Einstellungen:
+    """Alle Werte, die ein Stamm anpassen muss. Standard: der Block oben."""
+    glaeubiger_name:     str   = GLAEUBIGER_NAME
+    glaeubiger_id:       str   = GLAEUBIGER_ID
+    glaeubiger_iban:     str   = GLAEUBIGER_IBAN
+    glaeubiger_bic:      str   = GLAEUBIGER_BIC
+    stamm_name:          str   = STAMM_NAME
+    msg_id_prefix:       str   = MSG_ID_PREFIX
+    beitragsjahr:        int   = BEITRAGSJAHR
+    beitrag_einzelkind:  float = BEITRAG_EINZELKIND
+    beitrag_geschwister: float = BEITRAG_GESCHWISTER
+
+
+@dataclass
+class Ergebnis:
+    """Was bei der Verarbeitung herauskommt, noch ohne Dateien."""
+    buchungen:  list              # eine Lastschrift pro Haushalt
+    ueberweiser: pd.DataFrame     # aktive Mitglieder ohne IBAN
+    fehler:     pd.DataFrame      # nicht verarbeitbar, mit Spalte 'Fehlergrund'
+    anzahl_gesamt: int = 0
+    anzahl_aktiv:  int = 0
+
+    @property
+    def gesamtbetrag(self):
+        return sum(b['betrag'] for b in self.buchungen)
 
 
 def iban_valide(iban):
@@ -41,20 +71,20 @@ def iban_valide(iban):
     return int(ziffern) % 97 == 1
 
 
-def berechne_beitrag(anzahl):
+def berechne_beitrag(anzahl, e):
     """Ein Kind zahlt den Einzelbeitrag, bei Geschwistern zahlt jedes Kind den Geschwisterbeitrag."""
     if anzahl == 1:
-        return BEITRAG_EINZELKIND
-    return anzahl * BEITRAG_GESCHWISTER
+        return e.beitrag_einzelkind
+    return anzahl * e.beitrag_geschwister
 
 
-def erzeuge_msg_id(zeitpunkt):
+def erzeuge_msg_id(zeitpunkt, prefix):
     """Message-ID mit Datum und Uhrzeit (sekundengenau).
 
     Banken lehnen eine Datei ab, deren Message-ID schon einmal benutzt wurde.
     Mit nur dem Datum hätte ein zweiter Lauf am selben Tag dieselbe ID.
     """
-    return f"{MSG_ID_PREFIX}-{zeitpunkt.strftime('%Y%m%d%H%M%S')}"
+    return f"{prefix}-{zeitpunkt.strftime('%Y%m%d%H%M%S')}"
 
 
 def sub(parent, tag, text=None, **attrib):
@@ -65,7 +95,7 @@ def sub(parent, tag, text=None, **attrib):
     return el
 
 
-def build_pain_xml(buchungen, faellig, msg_id):
+def build_pain_xml(buchungen, faellig, msg_id, e):
     """Erzeugt pain.008.003.02 XML als UTF-8 bytes."""
     NS = 'urn:iso:std:iso:20022:tech:xsd:pain.008.003.02'
     ET.register_namespace('', NS)
@@ -90,7 +120,7 @@ def build_pain_xml(buchungen, faellig, msg_id):
     sub(hdr, n('CreDtTm'),  datetime.now().strftime('%Y-%m-%dT%H:%M:%S'))
     sub(hdr, n('NbOfTxs'),  str(len(buchungen)))
     sub(hdr, n('CtrlSum'),  f'{gesamt:.2f}')
-    sub(sub(hdr, n('InitgPty')), n('Nm'), GLAEUBIGER_NAME)
+    sub(sub(hdr, n('InitgPty')), n('Nm'), e.glaeubiger_name)
 
     # PmtInf
     pi = sub(doc, n('PmtInf'))
@@ -106,14 +136,14 @@ def build_pain_xml(buchungen, faellig, msg_id):
     sub(pti, n('SeqTp'), 'OOFF')
 
     sub(pi, n('ReqdColltnDt'), faellig)
-    sub(sub(pi, n('Cdtr')), n('Nm'), GLAEUBIGER_NAME)
-    sub(sub(sub(pi, n('CdtrAcct')), n('Id')), n('IBAN'), GLAEUBIGER_IBAN)
-    sub(sub(sub(pi, n('CdtrAgt')), n('FinInstnId')), n('BIC'), GLAEUBIGER_BIC)
+    sub(sub(pi, n('Cdtr')), n('Nm'), e.glaeubiger_name)
+    sub(sub(sub(pi, n('CdtrAcct')), n('Id')), n('IBAN'), e.glaeubiger_iban)
+    sub(sub(sub(pi, n('CdtrAgt')), n('FinInstnId')), n('BIC'), e.glaeubiger_bic)
     sub(pi, n('ChrgBr'), 'SLEV')
 
     # Gläubiger-ID: CdtrSchmeId/Id/PrvtId/Othr mit Id und SchmeNm/Prtry
     othr = sub(sub(sub(sub(pi, n('CdtrSchmeId')), n('Id')), n('PrvtId')), n('Othr'))
-    sub(othr, n('Id'), GLAEUBIGER_ID)
+    sub(othr, n('Id'), e.glaeubiger_id)
     sub(sub(othr, n('SchmeNm')), n('Prtry'), 'SEPA')
 
     # Einzelbuchungen
@@ -143,25 +173,17 @@ def build_pain_xml(buchungen, faellig, msg_id):
     return buf.getvalue()
 
 
-def sepa_pipeline():
-    print("=" * 55)
-    print(f"  {STAMM_NAME} – SEPA PIPELINE")
-    print("=" * 55)
-
-    if not os.path.exists(INPUT_DATEI):
-        print(f"FEHLER: {INPUT_DATEI} nicht gefunden.")
-        return
-
-    df = pd.read_excel(INPUT_DATEI, dtype=str)
+def lies_export(quelle):
+    """Liest den NaMi-Export. quelle = Dateipfad oder hochgeladene Datei."""
+    df = pd.read_excel(quelle, dtype=str)
     df.columns = df.columns.str.strip()
-    df = df.fillna('')
+    return df.fillna('')
 
-    print(f"  Datensätze gesamt: {len(df)}")
 
+def verarbeite(df, e):
+    """Teilt die Mitglieder auf und bildet die Buchungen. Schreibt keine Dateien."""
     aktiv = df[(df['Status'].str.strip() == AKTIV_STATUS) &
                (df['Mitgliedstyp'].str.strip() == AKTIV_TYP)].copy()
-    print(f"  Aktive Mitglieder: {len(aktiv)}")
-    print(f"  Herausgefiltert:   {len(df) - len(aktiv)}\n")
 
     aktiv['IBAN']         = aktiv['IBAN'].str.replace(' ', '').str.upper().str.strip()
     aktiv['Kontoinhaber'] = aktiv['Kontoinhaber'].str.strip()
@@ -169,9 +191,6 @@ def sepa_pipeline():
 
     df_lastschrift = aktiv[aktiv['IBAN'].str.len() > 0].copy()
     df_ueberweiser = aktiv[aktiv['IBAN'].str.len() == 0].copy()
-
-    print(f"  → Lastschrift: {len(df_lastschrift)}")
-    print(f"  → Überweisung: {len(df_ueberweiser)}\n")
 
     mitglieds_nr_col = [c for c in aktiv.columns if 'Mitglieds-Nr' in c][0]
     fehler_liste = []
@@ -202,8 +221,8 @@ def sepa_pipeline():
         mandat_datum = datum.strftime('%Y-%m-%d')
 
         vornamen = gruppe['Vorname'].tolist()
-        betrag   = berechne_beitrag(len(vornamen))
-        vwz      = f"{STAMM_NAME} {BEITRAGSJAHR} {', '.join(vornamen)}"
+        betrag   = berechne_beitrag(len(vornamen), e)
+        vwz      = f"{e.stamm_name} {e.beitragsjahr} {', '.join(vornamen)}"
 
         buchungen.append({
             'kontoinhaber':     kontoinhaber,
@@ -215,30 +234,53 @@ def sepa_pipeline():
             'verwendungszweck': vwz,
         })
 
-    faellig = FAELLIGKEITSDATUM if FAELLIGKEITSDATUM else date.today().strftime('%Y-%m-%d')
-    msg_id  = erzeuge_msg_id(datetime.now())
+    cols = [c for c in ['Mitglieds-Nr.', 'Vorname', 'Nachname', 'E-Mail',
+            'E-Mail Erziehungsberechtigter', 'Stufe/Abteilung']
+            if c in df_ueberweiser.columns]
 
-    if buchungen:
-        xml_bytes = build_pain_xml(buchungen, faellig, msg_id)
+    return Ergebnis(
+        buchungen=buchungen,
+        ueberweiser=df_ueberweiser[cols],
+        fehler=pd.DataFrame(fehler_liste),
+        anzahl_gesamt=len(df),
+        anzahl_aktiv=len(aktiv),
+    )
+
+
+def sepa_pipeline():
+    """Start per Kommandozeile: liest INPUT_DATEI und schreibt die drei Ausgabedateien."""
+    e = Einstellungen()
+    print("=" * 55)
+    print(f"  {e.stamm_name} – SEPA PIPELINE")
+    print("=" * 55)
+
+    if not os.path.exists(INPUT_DATEI):
+        print(f"FEHLER: {INPUT_DATEI} nicht gefunden.")
+        return
+
+    ergebnis = verarbeite(lies_export(INPUT_DATEI), e)
+    print(f"  Datensätze gesamt: {ergebnis.anzahl_gesamt}")
+    print(f"  Aktive Mitglieder: {ergebnis.anzahl_aktiv}\n")
+
+    faellig = FAELLIGKEITSDATUM if FAELLIGKEITSDATUM else date.today().strftime('%Y-%m-%d')
+    msg_id  = erzeuge_msg_id(datetime.now(), e.msg_id_prefix)
+
+    if ergebnis.buchungen:
         with open(OUTPUT_XML, 'wb') as f:
-            f.write(xml_bytes)
-        gesamt = sum(b['betrag'] for b in buchungen)
+            f.write(build_pain_xml(ergebnis.buchungen, faellig, msg_id, e))
         print(f"  ✓ SEPA XML: {OUTPUT_XML}")
-        print(f"    {len(buchungen)} Buchungen | Gesamtbetrag: {gesamt:.2f} EUR\n")
+        print(f"    {len(ergebnis.buchungen)} Buchungen | Gesamtbetrag: {ergebnis.gesamtbetrag:.2f} EUR\n")
     else:
         print("  ⚠ Keine gültigen Lastschriften.\n")
 
-    if not df_ueberweiser.empty:
-        cols = [c for c in ['Mitglieds-Nr.', 'Vorname', 'Nachname', 'E-Mail',
-                'E-Mail Erziehungsberechtigter', 'Stufe/Abteilung']
-                if c in df_ueberweiser.columns]
+    if not ergebnis.ueberweiser.empty:
         with pd.ExcelWriter(OUTPUT_UEBERWEISER, engine='openpyxl') as writer:
-            df_ueberweiser[cols].to_excel(writer, sheet_name='Überweiser', index=False)
-        print(f"  ✓ Überweiser: {OUTPUT_UEBERWEISER} ({len(df_ueberweiser)} Personen)\n")
+            ergebnis.ueberweiser.to_excel(writer, sheet_name='Überweiser', index=False)
+        print(f"  ✓ Überweiser: {OUTPUT_UEBERWEISER} ({len(ergebnis.ueberweiser)} Personen)\n")
 
-    if fehler_liste:
-        pd.DataFrame(fehler_liste).to_excel(OUTPUT_FEHLER, index=False)
-        print(f"  ✓ Fehler: {OUTPUT_FEHLER} ({len(fehler_liste)} Einträge)\n")
+    if not ergebnis.fehler.empty:
+        ergebnis.fehler.to_excel(OUTPUT_FEHLER, index=False)
+        print(f"  ✓ Fehler: {OUTPUT_FEHLER} ({len(ergebnis.fehler)} Einträge)\n")
     else:
         print("  ✓ Keine fehlerhaften Datensätze.\n")
 

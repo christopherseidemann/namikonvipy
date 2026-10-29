@@ -69,11 +69,10 @@ def test_iban_pruefung():
 
 
 @pytest.mark.parametrize('kinder, erwartet', [(1, 40.0), (2, 60.0), (3, 90.0)])
-def test_beitrag_pro_haushalt(kinder, erwartet, monkeypatch):
+def test_beitrag_pro_haushalt(kinder, erwartet):
     # Beträge im Test fest setzen, damit er nicht von der Konfiguration abhängt
-    monkeypatch.setattr(namikonvi, 'BEITRAG_EINZELKIND', 40.0)
-    monkeypatch.setattr(namikonvi, 'BEITRAG_GESCHWISTER', 30.0)
-    assert namikonvi.berechne_beitrag(kinder) == erwartet
+    e = namikonvi.Einstellungen(beitrag_einzelkind=40.0, beitrag_geschwister=30.0)
+    assert namikonvi.berechne_beitrag(kinder, e) == erwartet
 
 
 def test_xml_entspricht_dem_schema(tmp_path, monkeypatch):
@@ -105,8 +104,8 @@ def test_fehlende_bic_wird_als_notprovided_markiert(tmp_path, monkeypatch):
 
 
 def test_message_id_unterscheidet_zwei_laeufe_am_selben_tag():
-    morgens = namikonvi.erzeuge_msg_id(datetime(2026, 11, 1, 9, 0, 0))
-    abends  = namikonvi.erzeuge_msg_id(datetime(2026, 11, 1, 18, 30, 5))
+    morgens = namikonvi.erzeuge_msg_id(datetime(2026, 11, 1, 9, 0, 0), 'DPSG-BALINGEN')
+    abends  = namikonvi.erzeuge_msg_id(datetime(2026, 11, 1, 18, 30, 5), 'DPSG-BALINGEN')
     assert morgens != abends
     assert len(morgens) <= 35        # Höchstlänge laut Schema
 
