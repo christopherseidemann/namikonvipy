@@ -11,3 +11,6 @@ sepa_abbuchung.xml
 # Python-Systemdateien
 __pycache__/
 *.pyc
+# Python-Umgebung und lokale Einstellungen der App
+.venv/
+einstellungen.json
