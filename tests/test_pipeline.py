@@ -99,6 +99,20 @@ def test_haushalt_wird_nur_ueber_die_iban_gebildet(tmp_path, monkeypatch):
     assert 'Anna' in zweck and 'Hanna' in zweck
 
 
+@pytest.mark.parametrize('eintritt', ['', 'unbekannt'])
+def test_fehlendes_mandatsdatum_landet_im_fehlerbericht(tmp_path, monkeypatch, eintritt):
+    zeilen = [
+        mitglied('1001', 'Anna', 'Müller', IBAN_MUELLER),
+        mitglied('1003', 'Clara', 'Schmidt', IBAN_SCHMIDT, eintritt=eintritt),
+    ]
+    ordner = lauf(tmp_path, monkeypatch, zeilen)
+    fehler = pd.read_excel(ordner / namikonvi.OUTPUT_FEHLER, dtype=str)
+    assert fehler['Nachname'].tolist() == ['Schmidt']
+    assert 'Mandatsdatum' in fehler['Fehlergrund'].iloc[0]
+    ibans = lies_xml(ordner).xpath('//p:DbtrAcct/p:Id/p:IBAN/text()', namespaces=NS)
+    assert ibans == [IBAN_MUELLER]
+
+
 def test_ungueltige_iban_landet_im_fehlerbericht(tmp_path, monkeypatch):
     zeilen = STANDARD + [mitglied('1007', 'Greta', 'Falsch', 'DE31100000001111111111')]
     ordner = lauf(tmp_path, monkeypatch, zeilen)

@@ -181,12 +181,16 @@ def sepa_pipeline():
         bic          = gruppe['BIC/SWIFT'].iloc[0]
         mandat       = gruppe[mitglieds_nr_col].iloc[0]
 
-        try:
-            mandat_datum = pd.to_datetime(
-                gruppe['Eintrittsdatum'].iloc[0], dayfirst=True
-            ).strftime('%Y-%m-%d')
-        except Exception:
-            mandat_datum = date.today().strftime('%Y-%m-%d')
+        # Das Datum der Mandatsunterschrift ist Pflicht. Fehlt es, kommt der
+        # Haushalt in den Fehlerbericht, statt mit einem erfundenen Datum abgebucht zu werden.
+        eintritt = gruppe['Eintrittsdatum'].iloc[0]
+        datum = pd.to_datetime(eintritt, dayfirst=True, errors='coerce')  # unlesbar -> NaT
+        if pd.isna(datum):
+            for _, row in gruppe.iterrows():
+                r = row.to_dict(); r['Fehlergrund'] = f'Mandatsdatum fehlt oder ungültig: "{eintritt}"'
+                fehler_liste.append(r)
+            continue
+        mandat_datum = datum.strftime('%Y-%m-%d')
 
         vornamen = gruppe['Vorname'].tolist()
         betrag   = berechne_beitrag(len(vornamen))
