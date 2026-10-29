@@ -24,7 +24,7 @@ BEITRAGSJAHR       = 2026                 # steht im Verwendungszweck
 BEITRAG_EINZELKIND  = 40.0  # nur ein Kind im Haushalt
 BEITRAG_GESCHWISTER = 30.0  # ab zwei Kindern, gilt dann für jedes Kind
 
-INPUT_DATEI        = 'mitglieder_nami.xlsx'
+INPUT_DATEIEN      = ['mitglieder_nami.xls', 'mitglieder_nami.xlsx']  # die erste vorhandene wird gelesen
 OUTPUT_XML         = 'sepa_abbuchung.xml'
 OUTPUT_UEBERWEISER = 'ueberweiser_finanzen.xlsx'
 OUTPUT_FEHLER      = 'fehlende_daten.xlsx'
@@ -189,7 +189,11 @@ def build_pain_xml(buchungen, faellig, msg_id, e):
 
 
 def lies_export(quelle):
-    """Liest den NaMi-Export. quelle = Dateipfad oder hochgeladene Datei."""
+    """Liest den NaMi-Export (.xls oder .xlsx). quelle = Dateipfad oder hochgeladene Datei.
+
+    pandas erkennt das Format am Dateiinhalt und nimmt für .xls das Paket xlrd.
+    Die Datei wird nur gelesen, nie verändert.
+    """
     df = pd.read_excel(quelle, dtype=str)
     df.columns = df.columns.str.strip()
     return df.fillna('')
@@ -263,17 +267,18 @@ def verarbeite(df, e):
 
 
 def sepa_pipeline():
-    """Start per Kommandozeile: liest INPUT_DATEI und schreibt die drei Ausgabedateien."""
+    """Start per Kommandozeile: liest den NaMi-Export und schreibt die drei Ausgabedateien."""
     e = Einstellungen()
     print("=" * 55)
     print(f"  {e.stamm_name} – SEPA PIPELINE")
     print("=" * 55)
 
-    if not os.path.exists(INPUT_DATEI):
-        print(f"FEHLER: {INPUT_DATEI} nicht gefunden.")
+    vorhanden = [d for d in INPUT_DATEIEN if os.path.exists(d)]
+    if not vorhanden:
+        print(f"FEHLER: {' oder '.join(INPUT_DATEIEN)} nicht gefunden.")
         return
 
-    ergebnis = verarbeite(lies_export(INPUT_DATEI), e)
+    ergebnis = verarbeite(lies_export(vorhanden[0]), e)
     print(f"  Datensätze gesamt: {ergebnis.anzahl_gesamt}")
     print(f"  Aktive Mitglieder: {ergebnis.anzahl_aktiv}\n")
 

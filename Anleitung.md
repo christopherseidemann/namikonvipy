@@ -29,7 +29,7 @@ Zeigt Windows eine Sicherheitswarnung, liegt das daran, dass die Datei aus dem I
 ### In der App
 
 1. Links die Einstellungen ausfüllen (Vereinsdaten, Beiträge, Stammesname) und **Einstellungen speichern** klicken. Das ist nur beim ersten Mal nötig.
-2. In NaMi einen Excel-Export der aktiven Mitglieder erstellen und in der App hochladen.
+2. In NaMi einen Excel-Export der aktiven Mitglieder erstellen und die heruntergeladene `.xls`-Datei in der App hochladen. Umwandeln in `.xlsx` ist nicht nötig.
 3. Das Abbuchungsdatum wählen. Die Bank braucht die Datei mindestens einen Bankarbeitstag vorher.
 4. Unter **Prüfen** die Lastschriften durchsehen. In den Reitern **Zahlen selbst** und **Fehler** stehen alle, die nicht abgebucht werden.
 5. **SEPA-Datei herunterladen**, von einer zweiten Person prüfen lassen und im Online-Banking hochladen.
@@ -41,7 +41,7 @@ Die Listen „Zahlen selbst“ und den Fehlerbericht kannst du ebenfalls als Exc
 ## Ohne App (Kommandozeile)
 
 1. Einmalig im Ordner des Tools: `pip install -r requirements.txt`
-2. Den NaMi-Export als `mitglieder_nami.xlsx` in denselben Ordner legen.
+2. Den NaMi-Export als `mitglieder_nami.xls` (oder `.xlsx`) in denselben Ordner legen.
 3. `namikonvi.py` mit einem Texteditor öffnen und den oberen Bereich (VEREINSDATEN) anpassen:
    - `GLAEUBIGER_NAME`, `GLAEUBIGER_ID`: Name und Gläubiger-Identifikationsnummer deines Stammes (gibt's bei der Bundesbank/deiner Bank).
    - `GLAEUBIGER_IBAN`, `GLAEUBIGER_BIC`: Die Kontodaten deines Stammeskontos.

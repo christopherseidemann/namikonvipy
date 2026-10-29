@@ -6,7 +6,7 @@ I wrote it for the annual membership fee collection of my local scout group.
 
 ## What it does
 
-1. Reads the NaMi Excel export and keeps only active members (status `Aktiv`, type `Mitglied`).
+1. Reads the NaMi Excel export (`.xls` as downloaded from NaMi, or `.xlsx`) and keeps only active members (status `Aktiv`, type `Mitglied`).
 2. Members who share an IBAN are treated as one household and charged in a single
    debit. If there are two or more children, each pays the reduced sibling fee.
    The amounts are set in the app or in the configuration block.
@@ -35,7 +35,7 @@ pip install -r requirements.txt
 
 1. Fill in the configuration block at the top of `namikonvi.py`
    (creditor ID, account, fees, group name, year).
-2. Save the NaMi export as `mitglieder_nami.xlsx` next to the script.
+2. Save the NaMi export as `mitglieder_nami.xls` (or `.xlsx`) next to the script.
 3. Run `python namikonvi.py`.
 
 Both use the same function `verarbeite()`. A step-by-step guide in German for other
@@ -56,7 +56,7 @@ industry (`tests/schema/`). Tested with Python 3.13.
 
 The script runs locally and sends nothing over the network. The app only listens on
 `localhost`, and Streamlit's usage statistics are switched off in `.streamlit/config.toml`.
-`.gitignore` excludes all `.xlsx` and `.xml` files and the saved app settings, so that
+`.gitignore` excludes all `.xls`, `.xlsx` and `.xml` files and the saved app settings, so that
 member data cannot be committed by accident.
 
 ## License

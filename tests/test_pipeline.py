@@ -3,6 +3,7 @@
 Die IBANs haben gültige Prüfziffern, gehören aber zu keinem echten Konto
 (BLZ 10000000 ist die Bundesbank in Berlin, die Kontonummern sind ausgedacht).
 """
+import shutil
 from datetime import datetime
 from pathlib import Path
 
@@ -42,7 +43,7 @@ def mitglied(nr, vorname, nachname, iban='', status='Aktiv',
 def lauf(tmp_path, monkeypatch, zeilen):
     """Schreibt die Zeilen als Excel-Datei und startet die Pipeline im Testordner."""
     monkeypatch.chdir(tmp_path)
-    pd.DataFrame(zeilen).to_excel(namikonvi.INPUT_DATEI, index=False)
+    pd.DataFrame(zeilen).to_excel('mitglieder_nami.xlsx', index=False)
     namikonvi.sepa_pipeline()
     return tmp_path
 
@@ -71,6 +72,19 @@ def test_datumszelle_vertauscht_tag_und_monat_nicht(tmp_path, monkeypatch):
     ordner = lauf(tmp_path, monkeypatch, zeilen)
     daten = lies_xml(ordner).xpath('//p:DtOfSgntr/text()', namespaces=NS)
     assert daten == ['2019-03-05', '2019-03-05']
+
+
+def test_xls_export_wird_gelesen(tmp_path, monkeypatch):
+    # beispiel_export.xls: Anna + Ben Müller, Clara Schmidt (erfunden), mit Zahl- und
+    # Datumszellen wie in Excel. Annas Eintritt ist eine Datumszelle (05.03.2019).
+    shutil.copy(Path(__file__).parent / 'beispiel_export.xls', tmp_path / 'mitglieder_nami.xls')
+    monkeypatch.chdir(tmp_path)
+    namikonvi.sepa_pipeline()
+    xml = lies_xml(tmp_path)
+    schema = etree.XMLSchema(etree.parse(str(SCHEMA)))
+    assert schema.validate(xml), schema.error_log
+    assert xml.xpath('//p:MndtId/text()', namespaces=NS) == ['1001', '1003']   # nicht '1001.0'
+    assert xml.xpath('//p:DtOfSgntr/text()', namespaces=NS)[0] == '2019-03-05'
 
 
 def test_iban_pruefung():
