@@ -48,7 +48,7 @@ def vereinsdaten_fehler(e):
     return fehler
 
 
-st.set_page_config(page_title='NaMi → SEPA', page_icon='⚜️', layout='wide')
+st.set_page_config(page_title='namikonvipy', layout='wide')
 
 # ---------- Seitenleiste: Einstellungen ----------
 gespeichert = lade_einstellungen()
@@ -90,12 +90,12 @@ with st.sidebar:
         st.success('Gespeichert.')
 
 # ---------- Hauptbereich ----------
-st.title('Mitgliedsbeiträge per Lastschrift')
-st.write('Aus dem NaMi-Export wird eine SEPA-Datei für das Online-Banking. '
-         'Alles läuft auf diesem Computer, es werden keine Daten verschickt.')
+st.title('namikonvipy')
+st.write('Mitgliedsbeiträge per Lastschrift: Aus dem NaMi-Export wird eine SEPA-Datei für das '
+         'Online-Banking. Alles läuft auf diesem Computer, es werden keine Daten verschickt.')
 
 st.subheader('1. NaMi-Export hochladen')
-datei = st.file_uploader('Excel-Export der Mitglieder aus NaMi', type=['xlsx'])
+datei = st.file_uploader('Excel-Export der Mitglieder aus NaMi (.xls oder .xlsx)', type=['xls', 'xlsx'])
 faellig = st.date_input('Abbuchungsdatum', value=date.today() + timedelta(days=3),
                         min_value=date.today(), format='DD.MM.YYYY',
                         help='Die Bank braucht die Datei mindestens einen Bankarbeitstag vorher.')
@@ -105,7 +105,14 @@ if datei is None:
     st.stop()
 
 try:
-    ergebnis = nk.verarbeite(nk.lies_export(datei), e)
+    export = nk.lies_export(datei)
+except Exception:   # beliebiger Lesefehler, z. B. Datei ist keine echte Excel-Datei
+    st.error('Die Datei konnte nicht gelesen werden. Bitte in Excel öffnen, '
+             'als .xlsx speichern und diese Datei hochladen.')
+    st.stop()
+
+try:
+    ergebnis = nk.verarbeite(export, e)
 except KeyError as fehlende_spalte:
     st.error(f'Die Datei sieht nicht wie ein NaMi-Export aus: Spalte {fehlende_spalte} fehlt.')
     st.stop()

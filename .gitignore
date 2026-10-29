@@ -1,16 +1,16 @@
-# Excel-Datenbanken (Eingabe und Ausgabe)
+# Excel-Dateien mit Mitgliederdaten (Eingabe und Ausgabe)
+*.xls
 *.xlsx
-mitglieder_nami.xlsx
-ueberweiser_finanzen.xlsx
-fehlende_daten.xlsx
+# Ausnahme: erfundene Testdaten
+!tests/beispiel_export.xls
 
 # Generierte SEPA-Dateien
 *.xml
-sepa_abbuchung.xml
 
 # Python-Systemdateien
 __pycache__/
 *.pyc
+
 # Python-Umgebung und lokale Einstellungen der App
 .venv/
 einstellungen.json

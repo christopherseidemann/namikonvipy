@@ -24,7 +24,7 @@ BEITRAGSJAHR       = 2026                 # steht im Verwendungszweck
 BEITRAG_EINZELKIND  = 40.0  # nur ein Kind im Haushalt
 BEITRAG_GESCHWISTER = 30.0  # ab zwei Kindern, gilt dann für jedes Kind
 
-INPUT_DATEI        = 'mitglieder_nami.xlsx'
+INPUT_DATEIEN      = ['mitglieder_nami.xls', 'mitglieder_nami.xlsx']  # die erste vorhandene wird gelesen
 OUTPUT_XML         = 'sepa_abbuchung.xml'
 OUTPUT_UEBERWEISER = 'ueberweiser_finanzen.xlsx'
 OUTPUT_FEHLER      = 'fehlende_daten.xlsx'
@@ -69,6 +69,21 @@ def iban_valide(iban):
     rotiert = iban[4:] + iban[:4]
     ziffern = ''.join(str(ord(c) - 55) if c.isalpha() else c for c in rotiert)
     return int(ziffern) % 97 == 1
+
+
+def lies_datum(wert):
+    """Datum aus dem Export lesen; None, wenn es keins der erwarteten Formate ist.
+
+    Als Text steht es als '05.03.2019' im Export, aus einer Excel-Datumszelle wird
+    beim Einlesen '2019-03-05 00:00:00'. Nur feste Formate, damit Tag und Monat
+    nie vertauscht werden.
+    """
+    for muster in ('%d.%m.%Y', '%Y-%m-%d %H:%M:%S', '%Y-%m-%d'):
+        try:
+            return datetime.strptime(wert.strip(), muster).date()
+        except ValueError:
+            pass
+    return None
 
 
 def berechne_beitrag(anzahl, e):
@@ -174,7 +189,11 @@ def build_pain_xml(buchungen, faellig, msg_id, e):
 
 
 def lies_export(quelle):
-    """Liest den NaMi-Export. quelle = Dateipfad oder hochgeladene Datei."""
+    """Liest den NaMi-Export (.xls oder .xlsx). quelle = Dateipfad oder hochgeladene Datei.
+
+    pandas erkennt das Format am Dateiinhalt und nimmt für .xls das Paket xlrd.
+    Die Datei wird nur gelesen, nie verändert.
+    """
     df = pd.read_excel(quelle, dtype=str)
     df.columns = df.columns.str.strip()
     return df.fillna('')
@@ -212,8 +231,8 @@ def verarbeite(df, e):
         # Das Datum der Mandatsunterschrift ist Pflicht. Fehlt es, kommt der
         # Haushalt in den Fehlerbericht, statt mit einem erfundenen Datum abgebucht zu werden.
         eintritt = gruppe['Eintrittsdatum'].iloc[0]
-        datum = pd.to_datetime(eintritt, dayfirst=True, errors='coerce')  # unlesbar -> NaT
-        if pd.isna(datum):
+        datum = lies_datum(eintritt)
+        if datum is None:
             for _, row in gruppe.iterrows():
                 r = row.to_dict(); r['Fehlergrund'] = f'Mandatsdatum fehlt oder ungültig: "{eintritt}"'
                 fehler_liste.append(r)
@@ -248,17 +267,18 @@ def verarbeite(df, e):
 
 
 def sepa_pipeline():
-    """Start per Kommandozeile: liest INPUT_DATEI und schreibt die drei Ausgabedateien."""
+    """Start per Kommandozeile: liest den NaMi-Export und schreibt die drei Ausgabedateien."""
     e = Einstellungen()
     print("=" * 55)
     print(f"  {e.stamm_name} – SEPA PIPELINE")
     print("=" * 55)
 
-    if not os.path.exists(INPUT_DATEI):
-        print(f"FEHLER: {INPUT_DATEI} nicht gefunden.")
+    vorhanden = [d for d in INPUT_DATEIEN if os.path.exists(d)]
+    if not vorhanden:
+        print(f"FEHLER: {' oder '.join(INPUT_DATEIEN)} nicht gefunden.")
         return
 
-    ergebnis = verarbeite(lies_export(INPUT_DATEI), e)
+    ergebnis = verarbeite(lies_export(vorhanden[0]), e)
     print(f"  Datensätze gesamt: {ergebnis.anzahl_gesamt}")
     print(f"  Aktive Mitglieder: {ergebnis.anzahl_aktiv}\n")
 
