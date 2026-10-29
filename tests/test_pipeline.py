@@ -3,6 +3,7 @@
 Die IBANs haben gültige Prüfziffern, gehören aber zu keinem echten Konto
 (BLZ 10000000 ist die Bundesbank in Berlin, die Kontonummern sind ausgedacht).
 """
+from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
@@ -84,6 +85,13 @@ def test_ohne_iban_landet_auf_der_ueberweiserliste(tmp_path, monkeypatch):
     ordner = lauf(tmp_path, monkeypatch, STANDARD)
     liste = pd.read_excel(ordner / namikonvi.OUTPUT_UEBERWEISER, dtype=str)
     assert liste['Nachname'].tolist() == ['Ohnekonto']
+
+
+def test_message_id_unterscheidet_zwei_laeufe_am_selben_tag():
+    morgens = namikonvi.erzeuge_msg_id(datetime(2026, 11, 1, 9, 0, 0))
+    abends  = namikonvi.erzeuge_msg_id(datetime(2026, 11, 1, 18, 30, 5))
+    assert morgens != abends
+    assert len(morgens) <= 35        # Höchstlänge laut Schema
 
 
 def test_haushalt_wird_nur_ueber_die_iban_gebildet(tmp_path, monkeypatch):
