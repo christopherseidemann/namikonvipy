@@ -1,0 +1,19 @@
+# Datenschutz: Streamlit soll keine Nutzungsstatistik senden
+[browser]
+gatherUsageStats = false
+
+# Nur auf diesem Computer erreichbar, nicht im WLAN; keine E-Mail-Abfrage beim ersten Start
+[server]
+address = "localhost"
+showEmailPrompt = false
+
+# Kein "Deploy"-Knopf und kein Entwicklermenü
+[client]
+toolbarMode = "minimal"
+
+[theme]
+base = "light"
+primaryColor = "#1F5E4A"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#EEF2EE"
+textColor = "#1C2321"

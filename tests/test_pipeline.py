@@ -3,6 +3,7 @@
 Die IBANs haben gültige Prüfziffern, gehören aber zu keinem echten Konto
 (BLZ 10000000 ist die Bundesbank in Berlin, die Kontonummern sind ausgedacht).
 """
+from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
@@ -67,6 +68,13 @@ def test_iban_pruefung():
     assert not namikonvi.iban_valide('DE30')                       # zu kurz
 
 
+@pytest.mark.parametrize('kinder, erwartet', [(1, 40.0), (2, 60.0), (3, 90.0)])
+def test_beitrag_pro_haushalt(kinder, erwartet):
+    # Beträge im Test fest setzen, damit er nicht von der Konfiguration abhängt
+    e = namikonvi.Einstellungen(beitrag_einzelkind=40.0, beitrag_geschwister=30.0)
+    assert namikonvi.berechne_beitrag(kinder, e) == erwartet
+
+
 def test_xml_entspricht_dem_schema(tmp_path, monkeypatch):
     ordner = lauf(tmp_path, monkeypatch, STANDARD)
     schema = etree.XMLSchema(etree.parse(str(SCHEMA)))
@@ -84,6 +92,49 @@ def test_ohne_iban_landet_auf_der_ueberweiserliste(tmp_path, monkeypatch):
     ordner = lauf(tmp_path, monkeypatch, STANDARD)
     liste = pd.read_excel(ordner / namikonvi.OUTPUT_UEBERWEISER, dtype=str)
     assert liste['Nachname'].tolist() == ['Ohnekonto']
+
+
+def test_fehlende_bic_wird_als_notprovided_markiert(tmp_path, monkeypatch):
+    ordner = lauf(tmp_path, monkeypatch, STANDARD)
+    xml = lies_xml(ordner)
+    bics = xml.xpath('//p:DbtrAgt/p:FinInstnId/p:BIC/text()', namespaces=NS)
+    ohne = xml.xpath('//p:DbtrAgt/p:FinInstnId/p:Othr/p:Id/text()', namespaces=NS)
+    assert bics == ['MARKDEF1100']      # Schmidt hat eine BIC
+    assert ohne == ['NOTPROVIDED']      # Müller nicht
+
+
+def test_message_id_unterscheidet_zwei_laeufe_am_selben_tag():
+    morgens = namikonvi.erzeuge_msg_id(datetime(2026, 11, 1, 9, 0, 0), 'DPSG-BALINGEN')
+    abends  = namikonvi.erzeuge_msg_id(datetime(2026, 11, 1, 18, 30, 5), 'DPSG-BALINGEN')
+    assert morgens != abends
+    assert len(morgens) <= 35        # Höchstlänge laut Schema
+
+
+def test_haushalt_wird_nur_ueber_die_iban_gebildet(tmp_path, monkeypatch):
+    # Zwei Geschwister mit unterschiedlichem Nachnamen, gleiches Konto
+    zeilen = [
+        mitglied('1001', 'Anna', 'Müller', IBAN_MUELLER),
+        mitglied('1008', 'Hanna', 'Müller-Yilmaz', IBAN_MUELLER),
+    ]
+    ordner = lauf(tmp_path, monkeypatch, zeilen)
+    buchungen = lies_xml(ordner).xpath('//p:DrctDbtTxInf', namespaces=NS)
+    assert len(buchungen) == 1
+    zweck = buchungen[0].xpath('p:RmtInf/p:Ustrd/text()', namespaces=NS)[0]
+    assert 'Anna' in zweck and 'Hanna' in zweck
+
+
+@pytest.mark.parametrize('eintritt', ['', 'unbekannt'])
+def test_fehlendes_mandatsdatum_landet_im_fehlerbericht(tmp_path, monkeypatch, eintritt):
+    zeilen = [
+        mitglied('1001', 'Anna', 'Müller', IBAN_MUELLER),
+        mitglied('1003', 'Clara', 'Schmidt', IBAN_SCHMIDT, eintritt=eintritt),
+    ]
+    ordner = lauf(tmp_path, monkeypatch, zeilen)
+    fehler = pd.read_excel(ordner / namikonvi.OUTPUT_FEHLER, dtype=str)
+    assert fehler['Nachname'].tolist() == ['Schmidt']
+    assert 'Mandatsdatum' in fehler['Fehlergrund'].iloc[0]
+    ibans = lies_xml(ordner).xpath('//p:DbtrAcct/p:Id/p:IBAN/text()', namespaces=NS)
+    assert ibans == [IBAN_MUELLER]
 
 
 def test_ungueltige_iban_landet_im_fehlerbericht(tmp_path, monkeypatch):

@@ -5,3 +5,4 @@ DFÜ-Abkommens der Deutschen Kreditwirtschaft (Version 2.7, gültig ab November 
 Offizielle Quelle: https://www.ebics.de/de/datenformate
 
 Die Datei wird nur von den Tests benutzt, um das erzeugte XML zu prüfen.
+Sie steht nicht unter der MIT-Lizenz dieses Repos.
