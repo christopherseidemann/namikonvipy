@@ -48,7 +48,7 @@ def vereinsdaten_fehler(e):
     return fehler
 
 
-st.set_page_config(page_title='NaMi → SEPA', page_icon='⚜️', layout='wide')
+st.set_page_config(page_title='namikonvipy', layout='wide')
 
 # ---------- Seitenleiste: Einstellungen ----------
 gespeichert = lade_einstellungen()
@@ -90,9 +90,9 @@ with st.sidebar:
         st.success('Gespeichert.')
 
 # ---------- Hauptbereich ----------
-st.title('Mitgliedsbeiträge per Lastschrift')
-st.write('Aus dem NaMi-Export wird eine SEPA-Datei für das Online-Banking. '
-         'Alles läuft auf diesem Computer, es werden keine Daten verschickt.')
+st.title('namikonvipy')
+st.write('Mitgliedsbeiträge per Lastschrift: Aus dem NaMi-Export wird eine SEPA-Datei für das '
+         'Online-Banking. Alles läuft auf diesem Computer, es werden keine Daten verschickt.')
 
 st.subheader('1. NaMi-Export hochladen')
 datei = st.file_uploader('Excel-Export der Mitglieder aus NaMi (.xls oder .xlsx)', type=['xls', 'xlsx'])
