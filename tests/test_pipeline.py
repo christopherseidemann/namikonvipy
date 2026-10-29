@@ -61,6 +61,18 @@ STANDARD = [
 ]
 
 
+def test_datumszelle_vertauscht_tag_und_monat_nicht(tmp_path, monkeypatch):
+    # Eine echte Datumszelle kommt als '2019-03-05 00:00:00' an, Text als '05.03.2019'.
+    # Beide meinen den 5. März; dayfirst hatte die erste Form zum 3. Mai gemacht.
+    zeilen = [
+        mitglied('1001', 'Anna', 'Müller', IBAN_MUELLER, eintritt=datetime(2019, 3, 5)),
+        mitglied('1003', 'Clara', 'Schmidt', IBAN_SCHMIDT, eintritt='05.03.2019'),
+    ]
+    ordner = lauf(tmp_path, monkeypatch, zeilen)
+    daten = lies_xml(ordner).xpath('//p:DtOfSgntr/text()', namespaces=NS)
+    assert daten == ['2019-03-05', '2019-03-05']
+
+
 def test_iban_pruefung():
     assert namikonvi.iban_valide(IBAN_MUELLER)
     assert namikonvi.iban_valide('DE30 1000 0000 1111 1111 11')   # mit Leerzeichen

@@ -71,6 +71,21 @@ def iban_valide(iban):
     return int(ziffern) % 97 == 1
 
 
+def lies_datum(wert):
+    """Datum aus dem Export lesen; None, wenn es keins der erwarteten Formate ist.
+
+    Als Text steht es als '05.03.2019' im Export, aus einer Excel-Datumszelle wird
+    beim Einlesen '2019-03-05 00:00:00'. Nur feste Formate, damit Tag und Monat
+    nie vertauscht werden.
+    """
+    for muster in ('%d.%m.%Y', '%Y-%m-%d %H:%M:%S', '%Y-%m-%d'):
+        try:
+            return datetime.strptime(wert.strip(), muster).date()
+        except ValueError:
+            pass
+    return None
+
+
 def berechne_beitrag(anzahl, e):
     """Ein Kind zahlt den Einzelbeitrag, bei Geschwistern zahlt jedes Kind den Geschwisterbeitrag."""
     if anzahl == 1:
@@ -212,8 +227,8 @@ def verarbeite(df, e):
         # Das Datum der Mandatsunterschrift ist Pflicht. Fehlt es, kommt der
         # Haushalt in den Fehlerbericht, statt mit einem erfundenen Datum abgebucht zu werden.
         eintritt = gruppe['Eintrittsdatum'].iloc[0]
-        datum = pd.to_datetime(eintritt, dayfirst=True, errors='coerce')  # unlesbar -> NaT
-        if pd.isna(datum):
+        datum = lies_datum(eintritt)
+        if datum is None:
             for _, row in gruppe.iterrows():
                 r = row.to_dict(); r['Fehlergrund'] = f'Mandatsdatum fehlt oder ungültig: "{eintritt}"'
                 fehler_liste.append(r)
