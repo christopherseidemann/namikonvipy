@@ -18,14 +18,16 @@ STAMM_NAME         = 'DPSG Balingen eV'   # steht im Verwendungszweck
 MSG_ID_PREFIX      = 'DPSG-BALINGEN'      # Anfang der Message-ID, höchstens 17 Zeichen
 BEITRAGSJAHR       = 2026                 # steht im Verwendungszweck
 
-INPUT_DATEI        = 'mitglieder_nami.xlsx'
+# Jahresbeitrag in Euro pro Kind
+BEITRAG_EINZELKIND  = 40.0  # nur ein Kind im Haushalt
+BEITRAG_GESCHWISTER = 30.0  # ab zwei Kindern, gilt dann für jedes Kind
+
+INPUT_DATEI       = 'mitglieder_nami.xlsx'
 OUTPUT_XML         = 'sepa_abbuchung.xml'
 OUTPUT_UEBERWEISER = 'ueberweiser_finanzen.xlsx'
 OUTPUT_FEHLER      = 'fehlende_daten.xlsx'
 
-BEITRAG_ERSTKIND    = 40.0
-BEITRAG_GESCHWISTER = 30.0
-AKTIV_STATUS        = 'Aktiv'
+AKTIV_STATUS       = 'Aktiv'
 AKTIV_TYP           = 'Mitglied'
 # ==============================================================
 
@@ -40,8 +42,9 @@ def iban_valide(iban):
 
 
 def berechne_beitrag(anzahl):
+    """Ein Kind zahlt den Einzelbeitrag, bei Geschwistern zahlt jedes Kind den Geschwisterbeitrag."""
     if anzahl == 1:
-        return BEITRAG_ERSTKIND
+        return BEITRAG_EINZELKIND
     return anzahl * BEITRAG_GESCHWISTER
 
 

@@ -68,6 +68,14 @@ def test_iban_pruefung():
     assert not namikonvi.iban_valide('DE30')                       # zu kurz
 
 
+@pytest.mark.parametrize('kinder, erwartet', [(1, 40.0), (2, 60.0), (3, 90.0)])
+def test_beitrag_pro_haushalt(kinder, erwartet, monkeypatch):
+    # Beträge im Test fest setzen, damit er nicht von der Konfiguration abhängt
+    monkeypatch.setattr(namikonvi, 'BEITRAG_EINZELKIND', 40.0)
+    monkeypatch.setattr(namikonvi, 'BEITRAG_GESCHWISTER', 30.0)
+    assert namikonvi.berechne_beitrag(kinder) == erwartet
+
+
 def test_xml_entspricht_dem_schema(tmp_path, monkeypatch):
     ordner = lauf(tmp_path, monkeypatch, STANDARD)
     schema = etree.XMLSchema(etree.parse(str(SCHEMA)))
