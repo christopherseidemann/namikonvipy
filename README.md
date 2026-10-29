@@ -9,7 +9,7 @@ I wrote it for the annual membership fee collection of my local scout group.
 1. Reads the NaMi Excel export and keeps only active members (status `Aktiv`, type `Mitglied`).
 2. Members who share an IBAN are treated as one household and charged in a single
    debit. If there are two or more children, each pays the reduced sibling fee.
-   The amounts are set in the configuration block.
+   The amounts are set in the app or in the configuration block.
 3. Checks every IBAN with the ISO 7064 mod-97 checksum.
 4. Writes three files:
    - `sepa_abbuchung.xml`: the direct debit file for the bank
@@ -21,6 +21,14 @@ In our group, two people check the XML before it is uploaded to the bank.
 
 ## Usage
 
+Most people in scout groups do not use Python, so there is a small Streamlit app
+(`app.py`). On Windows, double-clicking `starten.bat` sets up a virtual environment
+on the first run and opens the app in the browser. In the app you upload the export,
+review the debits in a table and download the files. The XML download stays disabled
+while the club's account details are still placeholders.
+
+Without the app:
+
 ```bash
 pip install -r requirements.txt
 ```
@@ -30,7 +38,8 @@ pip install -r requirements.txt
 2. Save the NaMi export as `mitglieder_nami.xlsx` next to the script.
 3. Run `python namikonvi.py`.
 
-A step-by-step guide in German for other scout groups is in [Anleitung.md](Anleitung.md).
+Both use the same function `verarbeite()`. A step-by-step guide in German for other
+scout groups is in [Anleitung.md](Anleitung.md).
 
 ## Tests
 
@@ -45,8 +54,10 @@ industry (`tests/schema/`). Tested with Python 3.13.
 
 ## Data protection
 
-The script runs locally and sends nothing over the network. `.gitignore` excludes
-all `.xlsx` and `.xml` files so that member data cannot be committed by accident.
+The script runs locally and sends nothing over the network. The app only listens on
+`localhost`, and Streamlit's usage statistics are switched off in `.streamlit/config.toml`.
+`.gitignore` excludes all `.xlsx` and `.xml` files and the saved app settings, so that
+member data cannot be committed by accident.
 
 ## License
 

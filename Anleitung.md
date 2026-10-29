@@ -8,56 +8,50 @@ Schnuppermitglieder und inaktive Mitglieder werden ebenfalls einfach gefiltert.
 
 ---
 
-## Voraussetzungen (Für Einsteiger :) )
+## Mit der App (für Einsteiger :) )
 
-Um dieses Skript zu nutzen, brauchst du **Python** auf deinem Computer und zwei Erweiterungen (sogenannte Bibliotheken):
+Die App läuft im Browser, aber nur auf deinem Computer. Du brauchst dafür kein Programmierwissen.
 
-1. **Python:** Das ist die Programmiersprache, in der das Skript geschrieben ist. ([Hier herunterladen](https://www.python.org/downloads/))
-2. **Pandas:** Eine Erweiterung, die extrem gut mit Tabellen (Excel) umgehen kann.
-3. **Openpyxl:** Eine Erweiterung, die Python erlaubt, moderne `.xlsx`-Dateien zu schreiben.
+### Einmalig: Python installieren
 
----
+Lade Python von [python.org](https://www.python.org/downloads/) herunter und installiere es mit den vorgeschlagenen Einstellungen. Python ist die Programmiersprache, in der das Tool geschrieben ist.
 
-## Schritt-für-Schritt-Anleitung
+### Einmalig: Tool herunterladen
 
-### Schritt 1: Vorbereitung im NaMi
+Auf der GitHub-Seite des Projekts auf **Code** → **Download ZIP** klicken und die ZIP-Datei entpacken.
 
-1. Logge dich ins NaMi ein.
-2. Erstelle einen Excel-Export deiner aktiven Mitglieder.
-3. Benenne diese Datei um in `mitglieder_nami.xlsx` und lege sie in denselben Ordner wie das Skript.
+### Starten
 
-### Schritt 2: Installation (nur beim ersten Mal)
+Doppelklick auf `starten.bat`. Beim ersten Start richtet sich das Tool ein, das dauert ein paar Minuten. Danach öffnet sich die App im Browser. Das schwarze Fenster offen lassen, solange du die App benutzt; zum Beenden einfach schließen.
 
-Öffne die Eingabeaufforderung (Windows: `cmd` in der Suche eingeben) oder das Terminal (Mac) und tippe folgenden Befehl ein, um die benötigten Erweiterungen zu installieren:
+Zeigt Windows eine Sicherheitswarnung, liegt das daran, dass die Datei aus dem Internet stammt. Dann das Ausführen erlauben.
 
-```bash
-pip install -r requirements.txt
-```
+### In der App
 
-### Schritt 3: Skript anpassen
+1. Links die Einstellungen ausfüllen (Vereinsdaten, Beiträge, Stammesname) und **Einstellungen speichern** klicken. Das ist nur beim ersten Mal nötig.
+2. In NaMi einen Excel-Export der aktiven Mitglieder erstellen und in der App hochladen.
+3. Das Abbuchungsdatum wählen. Die Bank braucht die Datei mindestens einen Bankarbeitstag vorher.
+4. Unter **Prüfen** die Lastschriften durchsehen. In den Reitern **Zahlen selbst** und **Fehler** stehen alle, die nicht abgebucht werden.
+5. **SEPA-Datei herunterladen**, von einer zweiten Person prüfen lassen und im Online-Banking hochladen.
 
-Öffne die Datei `namikonvi.py` mit einem Texteditor und passe den oberen Bereich (VEREINSDATEN) an:
-
-- `GLAEUBIGER_NAME`, `GLAEUBIGER_ID`: Name und Gläubiger-Identifikationsnummer deines Stammes (gibt's bei der Bundesbank/deiner Bank).
-- `GLAEUBIGER_IBAN`, `GLAEUBIGER_BIC`: Die Kontodaten deines Stammeskontos.
-- `FAELLIGKEITSDATUM`: Tag der Abbuchung, leer lassen für heute.
-- `STAMM_NAME`, `BEITRAGSJAHR`: Stehen im Verwendungszweck.
-- `MSG_ID_PREFIX`: Anfang der Dateikennung für die Bank, höchstens 17 Zeichen.
-- `BEITRAG_EINZELKIND`, `BEITRAG_GESCHWISTER`: Eure aktuellen Stammesbeiträge. Ein Kind zahlt den Einzelbeitrag; sind es zwei oder mehr Kinder auf demselben Konto, zahlt jedes Kind den Geschwisterbeitrag.
-
-### Schritt 4: Skript starten
-
-Führe das Skript im Terminal aus:
-
-```bash
-python namikonvi.py
-```
+Die Listen „Zahlen selbst“ und den Fehlerbericht kannst du ebenfalls als Excel-Datei herunterladen.
 
 ---
 
-## Was passiert danach? (Ausgabedateien)
+## Ohne App (Kommandozeile)
 
-Das Skript erstellt drei Dateien (falls Daten vorhanden sind):
+1. Einmalig im Ordner des Tools: `pip install -r requirements.txt`
+2. Den NaMi-Export als `mitglieder_nami.xlsx` in denselben Ordner legen.
+3. `namikonvi.py` mit einem Texteditor öffnen und den oberen Bereich (VEREINSDATEN) anpassen:
+   - `GLAEUBIGER_NAME`, `GLAEUBIGER_ID`: Name und Gläubiger-Identifikationsnummer deines Stammes (gibt's bei der Bundesbank/deiner Bank).
+   - `GLAEUBIGER_IBAN`, `GLAEUBIGER_BIC`: Die Kontodaten deines Stammeskontos.
+   - `FAELLIGKEITSDATUM`: Tag der Abbuchung, leer lassen für heute.
+   - `STAMM_NAME`, `BEITRAGSJAHR`: Stehen im Verwendungszweck.
+   - `MSG_ID_PREFIX`: Anfang der Dateikennung für die Bank, höchstens 17 Zeichen.
+   - `BEITRAG_EINZELKIND`, `BEITRAG_GESCHWISTER`: Eure aktuellen Stammesbeiträge. Ein Kind zahlt den Einzelbeitrag; sind es zwei oder mehr Kinder auf demselben Konto, zahlt jedes Kind den Geschwisterbeitrag.
+4. `python namikonvi.py` ausführen.
+
+Das Skript erstellt dann drei Dateien (falls Daten vorhanden sind):
 
 - `sepa_abbuchung.xml`: Diese Datei lädst du im Online-Banking deines Vereins hoch, um die Beiträge einzuziehen. **Bitte vorher alles kontrollieren.**
 - `ueberweiser_finanzen.xlsx`: Eine Liste aller Mitglieder, bei denen keine IBAN hinterlegt ist. Diese müssen den Beitrag selbst überweisen.
@@ -67,7 +61,7 @@ Das Skript erstellt drei Dateien (falls Daten vorhanden sind):
 
 ## Datenschutz & Sicherheit
 
-Dieses Skript läuft vollständig lokal auf deinem Computer. Es werden keine Mitgliederdaten ins Internet hochgeladen oder an Dritte übertragen. Die `.gitignore`-Datei sorgt dafür, dass deine Excel-Tabellen niemals versehentlich auf GitHub veröffentlicht werden.
+Das Tool läuft vollständig lokal auf deinem Computer. Es werden keine Mitgliederdaten ins Internet hochgeladen oder an Dritte übertragen. Die App ist nur auf deinem eigenen Computer erreichbar, nicht im WLAN, und sendet auch keine Nutzungsstatistik an Streamlit. Die `.gitignore`-Datei sorgt dafür, dass deine Excel-Tabellen und Einstellungen niemals versehentlich auf GitHub veröffentlicht werden.
 
 Gut Pfad :)
 
