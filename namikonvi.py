@@ -41,6 +41,15 @@ def berechne_beitrag(anzahl):
     return anzahl * BEITRAG_GESCHWISTER
 
 
+def erzeuge_msg_id(zeitpunkt):
+    """Message-ID mit Datum und Uhrzeit (sekundengenau).
+
+    Banken lehnen eine Datei ab, deren Message-ID schon einmal benutzt wurde.
+    Mit nur dem Datum hätte ein zweiter Lauf am selben Tag dieselbe ID.
+    """
+    return f"DPSG-BALINGEN-{zeitpunkt.strftime('%Y%m%d%H%M%S')}"
+
+
 def sub(parent, tag, text=None, **attrib):
     """Hilfsfunktion: SubElement mit optionalem Text und Attributen."""
     el = ET.SubElement(parent, tag, **attrib)
@@ -207,7 +216,7 @@ def sepa_pipeline():
         })
 
     faellig = FAELLIGKEITSDATUM if FAELLIGKEITSDATUM else date.today().strftime('%Y-%m-%d')
-    msg_id  = f"DPSG-BALINGEN-{date.today().strftime('%Y%m%d')}"
+    msg_id  = erzeuge_msg_id(datetime.now())
 
     if buchungen:
         xml_bytes = build_pain_xml(buchungen, faellig, msg_id)
