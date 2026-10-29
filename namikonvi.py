@@ -104,21 +104,10 @@ def build_pain_xml(buchungen, faellig, msg_id):
     sub(sub(sub(pi, n('CdtrAgt')), n('FinInstnId')), n('BIC'), GLAEUBIGER_BIC)
     sub(pi, n('ChrgBr'), 'SLEV')
 
-    # CdtrSchmeId (Gläubiger-ID)
-    csi = sub(pi, n('CdtrSchmeId'))
-    othr = sub(sub(sub(sub(csi, n('Id')), n('PrvtId')), n('Othr')), n('Id'), GLAEUBIGER_ID)
-    schme = sub(othr.getparent() if hasattr(othr, 'getparent') else
-                list(csi.find(n('Id')).find(n('PrvtId'))), n('SchmeNm')) \
-        if False else None
-    # Ohne lxml kein getparent() – direkt aufbauen:
-    csi2 = root.find(f'.//{n("CdtrSchmeId")}')
-    id2   = sub(csi2, n('Id'))          if csi2.find(n('Id'))     is None else csi2.find(n('Id'))
-    prv   = sub(id2,  n('PrvtId'))      if id2.find(n('PrvtId'))  is None else id2.find(n('PrvtId'))
-    oth   = sub(prv,  n('Othr'))        if prv.find(n('Othr'))    is None else prv.find(n('Othr'))
-    if oth.find(n('Id')) is None:
-        sub(oth, n('Id'), GLAEUBIGER_ID)
-    snm   = sub(oth, n('SchmeNm'))
-    sub(snm, n('Prtry'), 'SEPA')
+    # Gläubiger-ID: CdtrSchmeId/Id/PrvtId/Othr mit Id und SchmeNm/Prtry
+    othr = sub(sub(sub(sub(pi, n('CdtrSchmeId')), n('Id')), n('PrvtId')), n('Othr'))
+    sub(othr, n('Id'), GLAEUBIGER_ID)
+    sub(sub(othr, n('SchmeNm')), n('Prtry'), 'SEPA')
 
     # Einzelbuchungen
     for b in buchungen:
